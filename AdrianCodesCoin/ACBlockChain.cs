@@ -1,14 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Text;
 
 namespace AdrianCodesCoin
 {
     internal class ACBlockChain
     {
         public List<ACBlock> Chain { get; private set; }
+
+        public int Difficulty { get; set; } = 2; //increase to give your system a workout
 
         public ACBlockChain()
         {
@@ -34,10 +32,7 @@ namespace AdrianCodesCoin
             {
                 newBlock.PreviousHash = GetLatestBlock().Hash;
 
-                var hash1 = newBlock.CalculateCurrentHash();
-                var hash2 = newBlock.CalculateCurrentHash();
-
-                newBlock.UpdateHash();
+                newBlock.MineBlock(Difficulty);
 
                 Chain.Add(newBlock);
 

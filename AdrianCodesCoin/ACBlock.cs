@@ -15,6 +15,8 @@ namespace AdrianCodesCoin
         public byte[] Hash { get; set; }
         public byte[] PreviousHash { get; set; }
 
+        public long Nonce { get; set; } = 0;
+
         public ACBlock(int index, DateTime timeStamp, int data) :
             this(index, timeStamp, BitConverter.GetBytes(data), new byte[0])
         {
@@ -31,33 +33,42 @@ namespace AdrianCodesCoin
             TimeStamp = timeStamp;
             Data = data;
             PreviousHash = previousHash;
-            Hash = CalculateHash(Index, TimeStamp, data, previousHash);
+            Hash = CalculateHash(Index, TimeStamp, data, previousHash, Nonce);
         }
 
         public void UpdateHash()
         {
-            Hash = CalculateHash(Index, TimeStamp, Data, PreviousHash);
+            Hash = CalculateHash(Index, TimeStamp, Data, PreviousHash, Nonce);
         }
 
         public byte[] CalculateCurrentHash()
         {
-            return CalculateHash(Index, TimeStamp, Data, PreviousHash);
+            return CalculateHash(Index, TimeStamp, Data, PreviousHash, Nonce);
         }
                
-        byte[] CalculateHash(int index, DateTime timeStamp, byte[] data, byte[] previousHash)
+        byte[] CalculateHash(int index, DateTime timeStamp, byte[] data, byte[] previousHash, long nonce)
         {
             using (SHA256 sha256 = SHA256.Create())
             {
                 try
                 {
-                    var dataToHash = new byte[data.Length + previousHash.Length + sizeof(int) + sizeof(long)];
-                   
-                    Array.Copy(data, 0, dataToHash, 0, data.Length);
-                    Array.Copy(previousHash, 0, dataToHash, data.Length, previousHash.Length);
-                    Array.Copy(BitConverter.GetBytes(index), 0, dataToHash, data.Length + previousHash.Length, sizeof(int));
-                    Array.Copy(BitConverter.GetBytes(timeStamp.Ticks), 0, dataToHash, data.Length + previousHash.Length + sizeof(int), sizeof(long));
+                    var dataToHash = new byte[data.Length + previousHash.Length + sizeof(int) + 2 * sizeof(long)];
 
-                    Array.Copy(previousHash, 0, dataToHash, data.Length + sizeof(int), previousHash.Length);
+                    //data
+                    int destinationIndex = 0;
+                    Array.Copy(data, 0, dataToHash, 0, data.Length);
+                    //previous hash
+                    destinationIndex = data.Length;
+                    Array.Copy(previousHash, 0, dataToHash, destinationIndex, previousHash.Length);
+                    //index
+                    destinationIndex += previousHash.Length;
+                    Array.Copy(BitConverter.GetBytes(index), 0, dataToHash, destinationIndex, sizeof(int));
+                    //timeStamp (as long)
+                    destinationIndex += sizeof(int);
+                    Array.Copy(BitConverter.GetBytes(timeStamp.Ticks), 0, dataToHash, destinationIndex, sizeof(long));
+                    //nonce
+                    destinationIndex += sizeof(long);
+                    Array.Copy(BitConverter.GetBytes(nonce), 0, dataToHash, destinationIndex, sizeof(long));
 
                     return sha256.ComputeHash(dataToHash);
                 }
@@ -68,6 +79,32 @@ namespace AdrianCodesCoin
                 }
             }
         }
+
+        public void MineBlock(int difficulty)
+        {
+            Console.WriteLine("Mining block ...");
+
+            //should probably cap difficulty
+            bool isWorking = true;
+
+            while (isWorking)
+            {
+                isWorking = false;
+                for (int i = 0; i < difficulty; i++)
+                {
+                    if (Hash[i] != 0)
+                    {
+                        isWorking = true;
+                        Nonce++;
+                        UpdateHash();
+                        break;
+                    }
+                }
+            }
+
+            Console.WriteLine($"Mined coin with a nonce of {Nonce}");
+        }
+
 
         public override string ToString()
         {
